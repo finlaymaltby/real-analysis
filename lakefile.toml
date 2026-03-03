@@ -1,0 +1,6 @@
+name = "real-analysis"
+version = "0.1.0"
+defaultTargets = ["RealAnalysis"]
+
+[[lean_lib]]
+name = "RealAnalysis"
