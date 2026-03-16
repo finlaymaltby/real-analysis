@@ -2,4 +2,3 @@
 
 TODO:
 elementary number theory
-mn or n m
