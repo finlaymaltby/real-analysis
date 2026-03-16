@@ -4,3 +4,7 @@ defaultTargets = ["RealAnalysis"]
 
 [[lean_lib]]
 name = "RealAnalysis"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
