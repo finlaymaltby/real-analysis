@@ -9,9 +9,11 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Image
 import Mathlib.Data.Finset.Max
 
+import Mathlib.Algebra.Order.Field.Basic
+
 import RealAnalysis.Real.Sequence
 
-private def converges (seq : Sequence ℚ) := ∀(ε : ℚ), ε > 0 → ∃N, ∀m > N, ∀n > N, |seq m - seq n| < ε
+private def converges (seq : Sequence ℚ) := ∀(ε : ℚ), ε > 0 → ∃N, ∀m ≥ N, ∀n ≥ N, |seq m - seq n| < ε
 
 structure Cauchy where
   seq : Sequence ℚ
@@ -61,11 +63,11 @@ def lift₂ (x y : Cauchy) (f : Sequence ℚ → Sequence ℚ → Sequence ℚ) 
     intro m m_lt_N n n_lt_N
 
     have x_conv := x_conv.choose_spec
-      m (sup_lt_iff.mp m_lt_N).left
-      n (sup_lt_iff.mp n_lt_N).left
+      m (sup_le_iff.mp m_lt_N).left
+      n (sup_le_iff.mp n_lt_N).left
     have y_conv := y_conv.choose_spec
-      m (sup_lt_iff.mp m_lt_N).right
-      n (sup_lt_iff.mp n_lt_N).right
+      m (sup_le_iff.mp m_lt_N).right
+      n (sup_le_iff.mp n_lt_N).right
 
     exact conv m n x_conv y_conv
 ⟩
@@ -85,11 +87,11 @@ def lift₂_single (x y : Cauchy) (f : Sequence ℚ → Sequence ℚ → Sequenc
     intro m m_lt_N n n_lt_N
 
     have x_conv := x_conv.choose_spec
-      m (sup_lt_iff.mp m_lt_N).left
-      n (sup_lt_iff.mp n_lt_N).left
+      m (sup_le_iff.mp m_lt_N).left
+      n (sup_le_iff.mp n_lt_N).left
     have y_conv := y_conv.choose_spec
-      m (sup_lt_iff.mp m_lt_N).right
-      n (sup_lt_iff.mp n_lt_N).right
+      m (sup_le_iff.mp m_lt_N).right
+      n (sup_le_iff.mp n_lt_N).right
 
     exact conv m n x_conv y_conv
 ⟩
@@ -144,13 +146,25 @@ theorem bounded_by_pos (x : Cauchy) (M : ℚ) : x.bounded_by M → M ≥ 0 := by
   have M_ge := (x_bounded_by_M 0).ge
   grind
 
-theorem eq_by_seq (x y : Cauchy) : x = y ↔ x.seq = y.seq := by
+theorem eq_by_seq {x y : Cauchy} : x = y ↔ x.seq = y.seq := by
   apply Iff.intro
   repeat
     intro seq_eq
     cases x
     cases y
     simp_all
+
+theorem eq_by_forall {x y : Cauchy} : x = y ↔ ∀n, x.seq n = y.seq n := by
+  apply Iff.intro
+  . intro x_eq_y n
+    subst x_eq_y
+    rfl
+  . intro h
+    apply eq_by_seq.mpr
+    funext n
+    exact (h n)
+
+theorem eq_const {x : Cauchy} {c : ℚ}: (∀i, x.seq i = c) → x = const c := by sorry
 
 instance : Add Cauchy where
   add x y := by
@@ -186,7 +200,7 @@ instance : Zero Cauchy where
 theorem seq_zero : seq 0 = 0 := neg_eq_zero.mp rfl
 
 @[simp]
-theorem zero_def : const 0 = 0 := by exact (eq_by_seq (const 0) 0).mpr rfl
+theorem zero_def : const 0 = 0 := by exact eq_by_seq.mpr rfl
 
 instance : Neg Cauchy where
   neg x := by
@@ -206,6 +220,13 @@ theorem neg_seq (x : Cauchy) : (-x).seq = -x.seq := by
   simp
 
 theorem const_neg (a : ℚ) : const (-a) = -const a := by rfl
+
+--
+instance : Sub Cauchy where
+  sub x y := x + (-y)
+
+theorem sub_seq (x y : Cauchy) : (x - y).seq = x.seq - y.seq := by
+  sorry
 
 instance : Mul Cauchy where
     mul x y := by
@@ -266,7 +287,10 @@ theorem const_mul (a b : ℚ) : const (a * b) = const a * const b := by rfl
 instance : One Cauchy where
     one := const 1
 
-instance : Coe ℚ Cauchy := ⟨const⟩
+theorem one_def : const 1 = 1 := by exact eq_by_seq.mpr rfl
+
+@[simp]
+theorem one_seq : seq 1 = Sequence.const 1 := by rfl
 
 instance : CommRing Cauchy where
   add_assoc x y z := by
@@ -281,7 +305,7 @@ instance : CommRing Cauchy where
     rw [eq_by_seq]
     exact add_zero _
 
-  nsmul s x := (s : ℚ) * x
+  nsmul s x := const s * x
 
   nsmul_zero x := by
     simp [eq_by_seq, mul_seq]
@@ -321,7 +345,7 @@ instance : CommRing Cauchy where
       rw [eq_by_seq]
       exact mul_one _
 
-  zsmul z x := (z : ℚ) * x
+  zsmul z x := const z * x
 
   zsmul_zero' x := by
       simp [eq_by_seq, mul_seq]
@@ -341,24 +365,27 @@ instance : CommRing Cauchy where
     rw [eq_by_seq]
     exact mul_comm _ _
 
--- TODO
+abbrev eqv_zero (x : Cauchy) := x.seq.limit 0
+
+theorem nz_gt_zero (x : Cauchy) (x_nz : ¬x.eqv_zero) : ∃N, ∃m > 0, ∀n ≥ N, |x.seq n| ≥ m := by
+  sorry
 
 instance : Setoid Cauchy where
-  r x y := ∀ε > 0, ∃N, ∀n > N, |x.seq n - y.seq n| < ε
+  r x y := eqv_zero (x - y)
   iseqv := by
     apply Equivalence.mk
 
     case refl =>
-        intro x ε ε_gt_0
-        exists 1
-        intro n n_gt_1
-        simp
-        exact ε_gt_0
+      intro x ε ε_gt_0
+      exists 1
+      intro n n_gt_1
+      simp
+      exact ε_gt_0
 
     case symm =>
-        intro x y x_eqv_y ε ε_gt_0
-        simp [abs_sub_comm]
-        exact x_eqv_y ε ε_gt_0
+      intro x y h
+      rw [eqv_zero, <-Sequence.neg_limit_zero]
+      simpa [<-neg_seq] using h
 
     case trans =>
         -- TODO figure out how use lift
@@ -371,19 +398,76 @@ instance : Setoid Cauchy where
         exists N
         intro n n_gt_N
 
-        have x_eqv_y := x_eqv_y.choose_spec n (sup_lt_iff.mp n_gt_N).left
-        have y_eqv_z := y_eqv_z.choose_spec n (sup_lt_iff.mp n_gt_N).right
+        have x_eqv_y := x_eqv_y.choose_spec n (sup_le_iff.mp n_gt_N).left
+        have y_eqv_z := y_eqv_z.choose_spec n (sup_le_iff.mp n_gt_N).right
 
         have := add_lt_add x_eqv_y y_eqv_z
         simp [add_halves] at this
         rw [<-gt_iff_lt] at *
-
+        simp [-gt_iff_lt]
         calc
-            ε > |x.seq n - y.seq n| + |y.seq n - z.seq n| := this
+            ε > |x.seq n - y.seq n| + |y.seq n - z.seq n| := sorry
             _ ≥ |x.seq n - y.seq n + (y.seq n - z.seq n)| := by grind
             _ ≥ |x.seq n - z.seq n| := by simp
+            _ = |(x - z).seq n| := by sorry
 
-theorem add_eqv {x₁ x₂ y₁ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁+y₁ ≈ x₂+y₂ := by
+def equiv_iff (x y : Cauchy) : (∀ε > 0, ∃N, ∀n ≥ N, |x.seq n - y.seq n| < ε) ↔ (x ≈ y) := by
+  rw [HasEquiv.Equiv, instHasEquivOfSetoid, instSetoid]
+  simp [eqv_zero, Sequence.limit]
+  simp [sub_seq, Sequence.sub_distrib]
+
+def inv_exists (x : Cauchy) (x_nz : ¬x.eqv_zero) : ∃y : Cauchy, x * y ≈ 1 := by
+  let ⟨N, m, m_gt_0, h_m⟩ := nz_gt_zero x x_nz
+
+  let y_seq : Sequence ℚ := fun i ↦ if i ≥ N then (x.seq i)⁻¹ else 0
+  let y : Cauchy := ⟨y_seq, ?_⟩
+  . exists y
+
+    intro ε ε_gt_0
+    exists N
+    intro i i_ge_N
+    subst y
+
+    simp [*, sub_seq, mul_seq, Sequence.sub_distrib, Sequence.mul_distrib, y_seq]
+
+    have : x.seq i ≠ 0 := by grind
+
+    simpa [Rat.mul_inv_cancel _ this] using ε_gt_0
+
+  . intro ε ε_gt_0
+    have h_m2 : m^2 > 0 := Rat.pow_pos m_gt_0
+    have ⟨M, x_conv⟩ := x.conv (m^2 * ε / 2) (by
+      simp [Rat.div_def, Rat.mul_pos h_m2 ε_gt_0]
+    )
+
+    let N := max N M
+    exists N
+    intro i i_gt_N j j_gt_N
+
+    have x_conv := x_conv i (by grind) j (by grind)
+    have h_i := h_m i (by grind)
+    have h_j := h_m j (by grind)
+    have h_ij : |x.seq i * x.seq j| ≥ m^2 := by simp [sq]; gcongr; grind
+
+    calc
+      ε > ε/2 := by grind
+      _ = m^2 * ε / 2 / m^2 := by grind
+      _ > |x.seq i - x.seq j|/m^2 := by gcongr
+      _ ≥ |x.seq i - x.seq j|/|x.seq i * x.seq j| := by gcongr; grind
+      _ = |x.seq j - x.seq i|/|x.seq i * x.seq j| := by grind
+      _ = |(x.seq j - x.seq i)/(x.seq i * x.seq j)| := by simp [Rat.div_def]
+      _ = |1/(x.seq i) - 1/(x.seq j)| := by grind
+      _ = |y_seq i - y_seq j| := by grind
+
+noncomputable instance : Inv Cauchy where
+  inv x := by
+    by_cases x.eqv_zero
+    case pos _ => exact 0
+    case neg h_x => exact Classical.choose (x.inv_exists h_x)
+
+-- EQUIVS TODO
+
+theorem add_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁+y₁ ≈ x₂+y₂ := by
   rw [HasEquiv.Equiv, instHasEquivOfSetoid, instSetoid]
   simp [-gt_iff_lt]
   intro x₁_eqv_x₂ y₁_eqv_y₂ ε ε_gt_0
@@ -393,33 +477,28 @@ theorem add_eqv {x₁ x₂ y₁ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂
 
   have ⟨N, x₁_eqv_x₂⟩ := x₁_eqv_x₂ δ δ_gt_0
   have ⟨N, y₁_eqv_y₂⟩ := y₁_eqv_y₂ δ δ_gt_0
-
   sorry
 
 theorem neg_eqv {x y : Cauchy} : x ≈ y → (-x) ≈ (-y) := by
   sorry
 
-theorem mul_eqv {x₁ x₂ y₁ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁*y₁ ≈ x₂*y₂ := by
+theorem mul_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁*y₁ ≈ x₂*y₂ := by
   sorry
 
-def Completion := Quotient Cauchy.instSetoid
+theorem sub_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁-y₁ ≈ x₂-y₂ := by
+  sorry
 
-instance : Add Completion :=
-  ⟨Quotient.map₂ (· + ·) (fun _ _ h_a _ _ h_b => add_eqv h_a h_b)⟩
+theorem pow_eqv {x y : Cauchy} {n : ℕ} : x ≈ y → x ^ n ≈ y ^ n := by sorry
 
-instance : Zero Completion := ⟨Quotient.mk' 0⟩
+theorem smul_eqv {x y : Cauchy} (z : ℤ) : x ≈ y → z • x ≈ z • y := by sorry
 
-instance : Neg Completion :=
-  ⟨Quotient.map (- ·) (fun _ _ h => neg_eqv h)⟩
+theorem inv_eqv {x y : Cauchy} : x ≈ y → x⁻¹ ≈ y⁻¹ := by
+  sorry
 
-instance : Mul Completion :=
-  ⟨Quotient.map₂ (· * ·) (fun _ _ h_a _ _ h_b => mul_eqv h_a h_b)⟩
-
-instance : One Completion := ⟨Quotient.mk' 1⟩
-
-instance : CommRing Completion := sorry
-
-
-
+theorem one_neqv_zero : ¬(1 : Cauchy) ≈ 0 := by
+  intro h
+  rw [HasEquiv.Equiv, instHasEquivOfSetoid, instSetoid] at h
+  simp [eqv_zero] at h
+  apply Sequence.limit_not_const 1 0 (by norm_num) h
 
 end Cauchy

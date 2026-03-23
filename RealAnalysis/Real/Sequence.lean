@@ -15,7 +15,7 @@ def cons (a : α) (s : Sequence α) : Sequence α
 
 def get (s : Sequence α) (n : ℕ) : α := s n
 
-def const (a : α) : Sequence α := fun _ ↦ a
+abbrev const (a : α) : Sequence α := fun _ ↦ a
 
 instance [Add α] : Add (Sequence α) where
     add (s₁ s₂ : Sequence α) := λ n ↦ s₁ n + s₂ n
@@ -34,7 +34,6 @@ instance [One α] : One (Sequence α) where
 
 instance [Inv α] : Inv (Sequence α) where
     inv s := λ n ↦ Inv.inv (s n)
-
 
 instance [HMul α β β] : SMul α (Sequence β) where
     smul m s := λ n ↦ m * s n
@@ -65,7 +64,6 @@ instance : CommRing (Sequence ℚ) where
         rw (occs := .pos [2]) [OfNat.ofNat]
         rw [Zero.toOfNat0, Zero.zero, instZero]
         simp
-        rfl
 
     nsmul_succ a s := by
         let t : Sequence ℚ := fun n => ↑a * s n
@@ -169,66 +167,73 @@ instance : CommRing (Sequence ℚ) where
 theorem const_add (a b : ℚ) : const (a + b) = const a + const b := by
     sorry
 
-@[simp]
-theorem one_def : const 1 = (1 : Sequence ℚ) := by rfl
-
 theorem add_distrib (s t : Sequence ℚ) (n : ℕ) : (s + t) n = s n + t n := by
     sorry
 
 theorem mul_distrib (s t : Sequence ℚ) (n : ℕ): (s * t) n = s n * t n := by
     sorry
 
+theorem sub_distrib {s t : Sequence ℚ} {n : ℕ} : (s - t) n = s n - t n := by
+    sorry
 
 theorem nsmul_distrib (s : Sequence ℚ) (k : ℕ) : ∀n, k • (s n) = (k • s) n := by
     intro n
     exact Rat.add_left_cancel (s n) rfl
 
+@[simp]
+theorem zero_def {i : ℕ} : (0 : Sequence ℚ) i = 0 := by
+    sorry
 
-theorem zero_zeroes : ∀n, (0 : Sequence ℚ) n = 0 := by
-    intro n
-    rw (occs := .pos [1]) [OfNat.ofNat]
-    unfold Zero.toOfNat0 Zero.zero instZero
-    unfold const
-    simp
+@[simp]
+theorem one_def : (const (1 : ℚ)) = 1 := by sorry
 
+@[simp]
+theorem one_eval {i : ℕ} : (1 : Sequence ℚ) i = 1 := by
+    sorry
+
+
+def limit (s : Sequence ℚ) (L : ℚ) := ∀ε > 0, ∃N, ∀n ≥ N, |s n - L| < ε
+def neg_limit_zero (s : Sequence ℚ) : (-s).limit 0 ↔ s.limit 0 := by sorry
+def limit_not_const (a b : ℚ) (a_neq_b : a ≠ b) : ¬ (const a).limit b := by sorry
+def const_limit (a : ℚ) : limit (const a) a := by sorry
 end Sequence
 
 
-instance : Setoid (Sequence ℚ) where
-    r x y := ∀(ε : ℚ), ε > 0 → ∃N, ∀n > N, abs (x n - y n) < ε
-    iseqv := by
-        apply Equivalence.mk
+-- instance : Setoid (Sequence ℚ) where
+--     r x y := ∀(ε : ℚ), ε > 0 → ∃N, ∀n > N, abs (x n - y n) < ε
+--     iseqv := by
+--         apply Equivalence.mk
 
-        case refl =>
-            intro x ε ε_gt_0
-            exists 1
-            intro n n_gt_1
-            simp
-            exact ε_gt_0.dual
+--         case refl =>
+--             intro x ε ε_gt_0
+--             exists 1
+--             intro n n_gt_1
+--             simp
+--             exact ε_gt_0.dual
 
-        case symm =>
-            intro x y x_eqv_y ε ε_gt_0
-            simp [abs_sub_comm]
-            exact x_eqv_y ε ε_gt_0
+--         case symm =>
+--             intro x y x_eqv_y ε ε_gt_0
+--             simp [abs_sub_comm]
+--             exact x_eqv_y ε ε_gt_0
 
-        case trans =>
-            intro x y z x_eqv_y y_eqv_z ε ε_gt_0
+--         case trans =>
+--             intro x y z x_eqv_y y_eqv_z ε ε_gt_0
 
-            have x_eqv_y := x_eqv_y (ε/2) (div_pos ε_gt_0 rfl)
-            have y_eqv_z := y_eqv_z (ε/2) (div_pos ε_gt_0 rfl)
+--             have x_eqv_y := x_eqv_y (ε/2) (div_pos ε_gt_0 rfl)
+--             have y_eqv_z := y_eqv_z (ε/2) (div_pos ε_gt_0 rfl)
 
-            let N := max x_eqv_y.choose y_eqv_z.choose
-            exists N
-            intro n n_gt_N
+--             let N := max x_eqv_y.choose y_eqv_z.choose
+--             exists N
+--             intro n n_gt_N
 
-            have x_eqv_y := x_eqv_y.choose_spec n (sup_lt_iff.mp n_gt_N).left
-            have y_eqv_z := y_eqv_z.choose_spec n (sup_lt_iff.mp n_gt_N).right
+--             have x_eqv_y := x_eqv_y.choose_spec n (sup_lt_iff.mp n_gt_N).left
+--             have y_eqv_z := y_eqv_z.choose_spec n (sup_lt_iff.mp n_gt_N).right
 
-            have := add_lt_add x_eqv_y y_eqv_z
-            simp [add_halves] at this
-            rw [<-gt_iff_lt] at *
+--             have := add_lt_add x_eqv_y y_eqv_z
+--             simp [add_halves] at this
+--             rw [<-gt_iff_lt] at *
 
-            calc
-                ε > |x n - y n| + |y n - z n| := this
-                _ ≥ |x n - y n + (y n - z n)| := (abs_add_le (x n - y n) (y n - z n)).ge
-                _ ≥ |x n - z n| := by simp
+--             calc
+--                 ε > |x n - y n| + |y n - z n| := this
+--                 _ ≥ |x n - y n + (y n - z n)| := (abs_add_le (x n - y n) (y n - z n)).ge
+--                 _ ≥ |x n - z n| := by simp

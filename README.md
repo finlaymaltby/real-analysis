@@ -1,4 +1,7 @@
 # real-analysis
 
 TODO:
-elementary number theory
+- finish cauchy construction
+- elementary number theory
+- fix arg order for lift and map
+- use cauchy modulus
