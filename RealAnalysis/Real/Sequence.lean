@@ -2,7 +2,6 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Data.Rat.Init
 import Mathlib.Data.Rat.Cast.Order
 import Mathlib.Data.Ordering.Basic
-import Mathlib.Algebra.Order.Group.Unbundled.Abs
 import Mathlib.Order.Lattice
 
 def Sequence (α: Type u) := ℕ -> α

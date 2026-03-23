@@ -1,29 +1,26 @@
 import RealAnalysis.Real.Cauchy
+import RealAnalysis.Real.Completion
 
 structure Real where
-    cauchy : Cauchy.Completion
+    inner : Completion
 
 notation "ℝ" => Real
 
 namespace Real
 
-abbrev cauchy_mk (cauchy : Cauchy) : ℝ := ⟨Quotient.mk Cauchy.instSetoid cauchy⟩
+private abbrev cauchy_mk (cauchy : Cauchy) : ℝ := ⟨Quotient.mk Cauchy.instSetoid cauchy⟩
 
-private def eq_iff : ∀ {x y : ℝ}, x = y ↔ x.cauchy = y.cauchy
+private def eq_iff : ∀ {x y : ℝ}, x = y ↔ x.inner = y.inner
     | ⟨a⟩, ⟨b⟩ => by rw [mk.injEq]
 
-private def lift (f : Cauchy → Cauchy) (h_f : ∀ (a b : Cauchy), a ≈ b → f a ≈ f b) (x : ℝ) := by
-    refine Quotient.lift (cauchy_mk ∘ f) ?_ x.cauchy
-    simp [eq_iff, Quotient.eq_iff_equiv]
-    exact h_f
+private def lift (f : Completion → Completion) (x : ℝ) : ℝ := ⟨f x.inner⟩
 
-private def lift₂  (f : Cauchy → Cauchy → Cauchy)
-    (h_f : ∀ (a₁ b₁ a₂ b₂ : Cauchy), a₁ ≈ a₂ → b₁ ≈ b₂ → f a₁ b₁ ≈ f a₂ b₂) (x y : ℝ) := by
-        refine Quotient.lift₂ (λ a b ↦ cauchy_mk (f a b)) ?_ x.cauchy y.cauchy
-        simp [eq_iff, Quotient.eq_iff_equiv]
-        exact h_f
+private def lift₂  (f : Completion → Completion → Completion) (x y : ℝ) : ℝ := ⟨f x.inner y.inner⟩
 
-namespace Coe
+@[simp]
+theorem lift_cauchy {x : ℝ} : (lift f x).inner = f x.inner := rfl
+
+section Coe
 
 instance : Coe ℚ ℝ where
     coe x := ⟨Quotient.mk' $ Cauchy.const x⟩
@@ -41,43 +38,30 @@ instance : OfScientific ℝ where
 
 end Coe
 
-instance : Add ℝ where
-    add := lift₂ (· + ·) @Cauchy.add_eqv
+instance : Add ℝ := ⟨lift₂ (· + ·)⟩
 
-theorem cauchy_add {x y : ℝ} : cauchy (x + y) = cauchy x + cauchy y := sorry
+theorem cauchy_add {x y : ℝ} : inner (x + y) = inner x + inner y := sorry
 
-instance : Zero ℝ where
-    zero := mk 0
+instance : Zero ℝ := ⟨0⟩
 
-theorem cauchy_zero : cauchy 0 = 0 := sorry
+theorem cauchy_zero : inner 0 = 0 := sorry
 
-instance : Neg ℝ where
-    neg := lift (- ·) @Cauchy.neg_eqv
+instance : Neg ℝ := ⟨lift (- ·)⟩
 
-theorem cauchy_neg {x : ℝ} : cauchy (-x) = - cauchy x := sorry
+theorem cauchy_neg {x : ℝ} : inner (-x) = - inner x := sorry
 
-instance : Mul ℝ where
-     mul := lift₂ (· * ·) @Cauchy.mul_eqv
+instance : Mul ℝ := ⟨lift₂ (· * ·)⟩
 
-theorem cauchy_mul {x y : ℝ} : cauchy (x * y) = cauchy x * cauchy y := sorry
+theorem cauchy_mul {x y : ℝ} : inner (x * y) = inner x * inner y := sorry
 
-instance : One ℝ where
-    one := mk 1
+instance : One ℝ := ⟨1⟩
 
-theorem cauchy_one : cauchy 1 = 1 := sorry
-
-instance : NatCast ℝ where
-    natCast n := ⟨n⟩
-
-theorem cauchy_natCast {n : ℕ}: cauchy (NatCast.natCast n) = NatCast.natCast n := sorry
+theorem cauchy_one : inner 1 = 1 := sorry
 
 instance : CommRing ℝ where
-    natCast n := mk n
-    intCast z := mk z
-    npow := npowRec
     nsmul := nsmulRec
     zsmul := zsmulRec
-    add_zero a := by apply eq_iff.mpr; simp [cauchy_add, cauchy_zero]
+    add_zero a := by apply eq_iff.mpr; simp [cauchy_zero, cauchy_add]
     zero_add a := by apply eq_iff.mpr; simp [cauchy_add, cauchy_zero]
     add_comm a b := by apply eq_iff.mpr; simp only [cauchy_add, add_comm]
     add_assoc a b c := by apply eq_iff.mpr; simp only [cauchy_add, add_assoc]
@@ -90,17 +74,22 @@ instance : CommRing ℝ where
     left_distrib a b c := by apply eq_iff.mpr; simp only [cauchy_add, cauchy_mul, mul_add]
     right_distrib a b c := by apply eq_iff.mpr; simp only [cauchy_add, cauchy_mul, add_mul]
     neg_add_cancel a := by apply eq_iff.mpr; simp [cauchy_add, cauchy_neg, cauchy_zero]
-    natCast_zero := by apply eq_iff.mpr; simp [cauchy_zero]
-    natCast_succ n := by apply eq_iff.mpr; simp [cauchy_one, cauchy_add]
-    intCast_negSucc z := by apply eq_iff.mpr; simp [cauchy_neg, cauchy_natCast]
 
-instance : Inv ℝ where
-    inv := lift (Inv.inv) @Cauchy.inv_eqv
+noncomputable instance : Field ℝ where
+    inv := lift (Inv.inv)
+    mul_inv_cancel a a_neq_0 := by
+        apply eq_iff.mpr
 
-instance : Field ℝ where
+        simp [cauchy_mul, cauchy_one, lift_cauchy]
+        refine Field.mul_inv_cancel a.inner ?_
+        exact ne_of_apply_ne mk a_neq_0
+    inv_zero := by simp [eq_iff]; exact inv_zero
+
+    exists_pair_ne := by exists ⟨1⟩, ⟨0⟩; simp
+
+    nnqsmul := _
+    qsmul := _
 
 
-
-#eval 1.0/0.0
 
 end Real

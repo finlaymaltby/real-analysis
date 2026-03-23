@@ -1,34 +1,40 @@
 import RealAnalysis.Real.Cauchy
 
-open Cauchy
-
 abbrev Completion := Quotient Cauchy.instSetoid
 
-instance : Add Completion := ⟨Quotient.map₂ (· + ·) (fun _ _ h_a _ _ h_b => add_eqv h_a h_b)⟩
+namespace Completion
 
-instance : Zero Completion := ⟨Quotient.mk' 0⟩
+instance : Add Completion := ⟨Quotient.map₂ (· + ·) (fun _ _ h_a _ _ h_b => Cauchy.add_eqv h_a h_b)⟩
 
-instance : Neg Completion := ⟨Quotient.map (- ·) (fun _ _ h => neg_eqv h)⟩
+instance : Zero Completion := ⟨⟦0⟧⟩
 
-instance : Mul Completion := ⟨Quotient.map₂ (· * ·) (fun _ _ h_a _ _ h_b => mul_eqv h_a h_b)⟩
+def zero_def : (0 : Completion) = ⟦0⟧ := by rfl
 
-instance : One Completion := ⟨Quotient.mk' 1⟩
+instance : Neg Completion := ⟨Quotient.map (- ·) (fun _ _ h => Cauchy.neg_eqv h)⟩
+
+instance : Mul Completion := ⟨Quotient.map₂ (· * ·) (fun _ _ h_a _ _ h_b => Cauchy.mul_eqv h_a h_b)⟩
+
+theorem mk_mul {x y : Cauchy} : ⟦x⟧ * ⟦y⟧ = (⟦x * y⟧ : Completion) := by
+  rw [HMul.hMul, instHMul]
+  simp [Mul.mul]
+
+instance : One Completion := ⟨⟦1⟧⟩
 
 instance : IntCast Completion := ⟨Quotient.mk' ∘ IntCast.intCast⟩
 
 instance : NatCast Completion := ⟨Quotient.mk' ∘ NatCast.natCast⟩
 
 instance : Pow Completion ℕ where
-  pow a n := Quotient.map (· ^ n) (fun _ _ h => pow_eqv h) a
+  pow a n := Quotient.map (· ^ n) (fun _ _ h => Cauchy.pow_eqv h) a
 
 instance : SMul ℤ Completion where
-  smul z := Quotient.map (z • ·) (fun _ _ h => smul_eqv z h)
+  smul z := Quotient.map (z • ·) (fun _ _ h => Cauchy.smul_eqv z h)
 
 instance : SMul ℕ Completion where
-  smul n := Quotient.map ((n : ℤ) • ·) (fun _ _ h => smul_eqv n h)
+  smul n := Quotient.map ((n : ℤ) • ·) (fun _ _ h => Cauchy.smul_eqv n h)
 
 instance : Sub Completion :=
-  ⟨Quotient.map₂ (· - ·) (fun _ _ h_a _ _ h_b => sub_eqv h_a h_b)⟩
+  ⟨Quotient.map₂ (· - ·) (fun _ _ h_a _ _ h_b => Cauchy.sub_eqv h_a h_b)⟩
 
 instance : CommRing Completion := fast_instance% by
   apply Function.Surjective.commRing Quotient.mk' (Quotient.mk'_surjective)
@@ -48,13 +54,34 @@ instance : CommRing Completion := fast_instance% by
   . exact (fun a => rfl)
   . exact (fun a => rfl)
 
-instance : Field Completion where
-  inv := Quotient.map (Inv.inv) @inv_eqv
-  mul_inv_cancel a a_nz := by
-    apply mul_inv
+instance : Coe ℚ Completion := ⟨fun q => ⟦↑q⟧⟩
+
+noncomputable instance : Field Completion where
+  inv := Quotient.map (Inv.inv) @Cauchy.inv_eqv
+  mul_inv_cancel := by
+    rw [Quotient.forall]
+    intro a a_neq_0
+    simp [Quotient.map_mk, mk_mul]
+
+    apply Quotient.eq_iff_equiv.mpr
+    apply Cauchy.mul_inv_cancel
+
+    simp [zero_def, Quotient.eq, Cauchy.instSetoid] at a_neq_0
+    exact a_neq_0
+
+  inv_zero := by
+    simp [zero_def, Quotient.eq_iff_equiv, Inv.inv]
+    rw [dite_cond_eq_true (eq_true Cauchy.zero_eqv_zero)]
+    exact Setoid.refl 0
 
   exists_pair_ne := by
     exists Quotient.mk' 1, Quotient.mk' 0
     intro h
     rw [Quotient.eq'] at h
-    apply one_neqv_zero h
+    apply Cauchy.one_neqv_zero h
+
+  nnqsmul := _
+  qsmul := _
+
+
+end Completion

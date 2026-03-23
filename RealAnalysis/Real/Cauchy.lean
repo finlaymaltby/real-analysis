@@ -2,7 +2,7 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Data.Rat.Init
 import Mathlib.Data.Rat.Cast.Order
 import Mathlib.Data.Ordering.Basic
-import Mathlib.Algebra.Order.Group.Unbundled.Abs
+
 import Mathlib.Algebra.Order.Ring.Abs
 import Mathlib.Order.Lattice
 import Mathlib.Data.Finset.Basic
@@ -367,8 +367,12 @@ instance : CommRing Cauchy where
 
 abbrev eqv_zero (x : Cauchy) := x.seq.limit 0
 
+theorem zero_eqv_zero : eqv_zero 0 := by
+  sorry
+
 theorem nz_gt_zero (x : Cauchy) (x_nz : ¬x.eqv_zero) : ∃N, ∃m > 0, ∀n ≥ N, |x.seq n| ≥ m := by
   sorry
+
 
 instance : Setoid Cauchy where
   r x y := eqv_zero (x - y)
@@ -465,6 +469,11 @@ noncomputable instance : Inv Cauchy where
     case pos _ => exact 0
     case neg h_x => exact Classical.choose (x.inv_exists h_x)
 
+theorem mul_inv_cancel {x : Cauchy} (x_nz : ¬x.eqv_zero) : x * x⁻¹ ≈ 1 := by
+  simp [Inv.inv]
+  rw [dite_cond_eq_false (eq_false x_nz)]
+  grind
+
 -- EQUIVS TODO
 
 theorem add_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁+y₁ ≈ x₂+y₂ := by
@@ -500,5 +509,9 @@ theorem one_neqv_zero : ¬(1 : Cauchy) ≈ 0 := by
   rw [HasEquiv.Equiv, instHasEquivOfSetoid, instSetoid] at h
   simp [eqv_zero] at h
   apply Sequence.limit_not_const 1 0 (by norm_num) h
+
+instance : Coe ℚ Cauchy where
+  coe q := const q
+
 
 end Cauchy
