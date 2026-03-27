@@ -14,7 +14,7 @@ namespace Q1
 abbrev S p q := ((¬p) → q) → (p → (¬q))
 
 /-
-Show that S is not a tautology nor a contradiction
+Show that `S` is not a tautology nor a contradiction
 -/
 #eval S True True -- => False
 #eval S True False -- => True
@@ -104,7 +104,7 @@ namespace Q4
 abbrev S (a b : ℤ) (_a_gt_b : a > b := by grind) (_b_ge_0 : b ≥ 0 := by grind) := ∃x k : ℤ, x^2 = a * k + b
 abbrev S' := S 4 3
 
-example : ¬S' = ∀x k : ℤ, x^2 ≠ 4*k + 3 := by grind
+example : ¬S' ↔ ∀x k : ℤ, x^2 ≠ 4*k + 3 := by grind
 
 example : ¬S' := by
   simp

@@ -2,23 +2,24 @@ import RealAnalysis.Real.Cauchy
 import RealAnalysis.Real.Completion
 
 structure Real where
-    inner : Completion
+    cauchy : Completion
 
 notation "ℝ" => Real
 
 namespace Real
 
-private abbrev cauchy_mk (cauchy : Cauchy) : ℝ := ⟨Quotient.mk Cauchy.instSetoid cauchy⟩
-
-private def eq_iff : ∀ {x y : ℝ}, x = y ↔ x.inner = y.inner
+private def eq_iff : ∀ {x y : ℝ}, x = y ↔ x.cauchy = y.cauchy
     | ⟨a⟩, ⟨b⟩ => by rw [mk.injEq]
 
-private def lift (f : Completion → Completion) (x : ℝ) : ℝ := ⟨f x.inner⟩
+private def lift (f : Completion → Completion) (x : ℝ) : ℝ := ⟨f x.cauchy⟩
 
-private def lift₂  (f : Completion → Completion → Completion) (x y : ℝ) : ℝ := ⟨f x.inner y.inner⟩
+private def lift₂  (f : Completion → Completion → Completion) (x y : ℝ) : ℝ := ⟨f x.cauchy y.cauchy⟩
 
 @[simp]
-theorem lift_cauchy {x : ℝ} : (lift f x).inner = f x.inner := rfl
+theorem lift_cauchy {x : ℝ} : (lift f x).cauchy = f x.cauchy := rfl
+
+@[simp]
+theorem lift₂_cauchy {x y : ℝ} : (lift₂ f x y).cauchy = f x.cauchy y.cauchy := rfl
 
 section Coe
 
@@ -40,23 +41,23 @@ end Coe
 
 instance : Add ℝ := ⟨lift₂ (· + ·)⟩
 
-theorem cauchy_add {x y : ℝ} : inner (x + y) = inner x + inner y := sorry
+theorem cauchy_add {x y : ℝ} : cauchy (x + y) = cauchy x + cauchy y := by simp [HAdd.hAdd, Add.add]
 
 instance : Zero ℝ := ⟨0⟩
 
-theorem cauchy_zero : inner 0 = 0 := sorry
+theorem cauchy_zero : cauchy 0 = 0 := rfl
 
 instance : Neg ℝ := ⟨lift (- ·)⟩
 
-theorem cauchy_neg {x : ℝ} : inner (-x) = - inner x := sorry
+theorem cauchy_neg {x : ℝ} : cauchy (-x) = - cauchy x := by simp [Neg.neg]
 
 instance : Mul ℝ := ⟨lift₂ (· * ·)⟩
 
-theorem cauchy_mul {x y : ℝ} : inner (x * y) = inner x * inner y := sorry
+theorem cauchy_mul {x y : ℝ} : cauchy (x * y) = cauchy x * cauchy y := by simp [HMul.hMul, Mul.mul]
 
 instance : One ℝ := ⟨1⟩
 
-theorem cauchy_one : inner 1 = 1 := sorry
+theorem cauchy_one : cauchy 1 = 1 := rfl
 
 instance : CommRing ℝ where
     nsmul := nsmulRec
@@ -81,7 +82,7 @@ noncomputable instance : Field ℝ where
         apply eq_iff.mpr
 
         simp [cauchy_mul, cauchy_one, lift_cauchy]
-        refine Field.mul_inv_cancel a.inner ?_
+        refine Field.mul_inv_cancel a.cauchy ?_
         exact ne_of_apply_ne mk a_neq_0
     inv_zero := by simp [eq_iff]; exact inv_zero
 

@@ -54,8 +54,6 @@ instance : CommRing Completion := fast_instance% by
   . exact (fun a => rfl)
   . exact (fun a => rfl)
 
-instance : Coe ℚ Completion := ⟨fun q => ⟦↑q⟧⟩
-
 noncomputable instance : Field Completion where
   inv := Quotient.map (Inv.inv) @Cauchy.inv_eqv
   mul_inv_cancel := by
@@ -64,14 +62,14 @@ noncomputable instance : Field Completion where
     simp [Quotient.map_mk, mk_mul]
 
     apply Quotient.eq_iff_equiv.mpr
-    apply Cauchy.mul_inv_cancel
+    apply Cauchy.mul_inv_eqv
 
-    simp [zero_def, Quotient.eq, Cauchy.instSetoid] at a_neq_0
+    simp [zero_def, Quotient.eq_iff_equiv] at a_neq_0
     exact a_neq_0
 
   inv_zero := by
     simp [zero_def, Quotient.eq_iff_equiv, Inv.inv]
-    rw [dite_cond_eq_true (eq_true Cauchy.zero_eqv_zero)]
+    rw [dite_cond_eq_true (eq_true (Setoid.refl 0))]
     exact Setoid.refl 0
 
   exists_pair_ne := by

@@ -13,88 +13,99 @@ import Mathlib.Algebra.Order.Field.Basic
 
 import RealAnalysis.Real.Sequence
 
-private def converges (seq : Sequence ℚ) := ∀(ε : ℚ), ε > 0 → ∃N, ∀m ≥ N, ∀n ≥ N, |seq m - seq n| < ε
+
+
+private abbrev converges (s : Sequence ℚ) := ∀(ε : ℚ), ε > 0 → ∃N, ∀m ≥ N, ∀n ≥ N, |s m - s n| < ε
 
 structure Cauchy where
   seq : Sequence ℚ
   conv : converges seq
 
-namespace Cauchy
 
-def const (a : ℚ) : Cauchy := by
-  refine ⟨fun _ => a, ?_ ⟩
+namespace Cauchy
+open Sequence (map₀ const map map₂)
+
+section basic
+
+-- TODO simplify
+theorem eq_by_seq {x y : Cauchy} : x.seq = y.seq → x = y := by
+  intro h
+  cases x
+  subst h
+  rfl
+
+theorem eq_by_forall {x y : Cauchy} : (∀i, x.seq i = y.seq i) → x = y := by
+  simpa [Sequence.eq_by] using eq_by_seq
+
+end basic
+
+section lifts
+
+abbrev lifts₀ (f : ℚ) := converges (map₀ f)
+
+def lift₀ (f : ℚ) {h_f : converges (map₀ f)} : Cauchy := by
+  refine ⟨map₀ f, h_f⟩
+
+abbrev const (a : ℚ) : Cauchy := by
+  apply lift₀ a
   intro ε ε_gt_0
   exists 0
-  intro n n_gt_0 m m_gt_0
-  simp
-  exact ε_gt_0
+  simpa
+
+abbrev lifts (f : ℚ → ℚ) := ∀{x : Cauchy}, converges (map f x.seq)
+
+def lift (f : ℚ → ℚ) {h_f : lifts f} (x : Cauchy) : Cauchy := ⟨map f x.seq, h_f⟩
+
+abbrev lifts₂ (f : ℚ → ℚ → ℚ) := ∀{x y : Cauchy}, converges (map₂ f x.seq y.seq)
+
+def lift₂ (f : ℚ → ℚ → ℚ) {h_f : lifts₂ f} (x y : Cauchy) : Cauchy := ⟨map₂ f x.seq y.seq, h_f⟩
+
 
 @[simp]
-theorem const_seq_const (a : ℚ) : (const a).seq = Sequence.const a := by rfl
+theorem lift₀_seq (f : ℚ) {h_f : lifts₀ f} : (@lift₀ f h_f).seq = map₀ f := by rfl
 
-def lift (f : Sequence ℚ -> Sequence ℚ) (x : Cauchy)  (conv : ∀ε > 0, ∃δ > 0,
-  ∀ m n, (|x.seq m - x.seq n| < δ) → |(f x.seq) m - (f x.seq) n| < ε)
-  : Cauchy := ⟨f x.seq, by
-    intro ε ε_gt_0
+@[simp]
+theorem lift_seq (f : ℚ → ℚ) {h_f : lifts f} {x : Cauchy}: (@lift f h_f x).seq = map f x.seq := by rfl
 
-    let ⟨δ, δ_gt_0, conv⟩ := conv ε ε_gt_0
+@[simp]
+theorem lift₂_seq (f : ℚ → ℚ → ℚ) {h_f : lifts₂ f} {x y : Cauchy} : (@lift₂ f h_f x y).seq = map₂ f x.seq y.seq := rfl
 
-    let ⟨N, h_N⟩ := x.conv δ δ_gt_0
-    exists N
-    intro m m_lt_N n n_lt_N
+theorem lifts_by (f : ℚ → ℚ)
+  (h :
+    ∀x : Cauchy,
+    ∀ε > 0,
+    ∃δ > 0,
+    ∀ m n,
+    |x.seq m - x.seq n| < δ →
+    |map f x.seq m - map f x.seq n| < ε
+  ) : lifts f := by
+  intro x ε ε_gt_0
+  let ⟨δ, δ_gt_0, h⟩ := h x ε ε_gt_0
+  let ⟨N, x_conv⟩ := x.conv δ δ_gt_0
+  exists N
+  grind
 
-    have x_conv := h_N m m_lt_N n n_lt_N
+theorem lifts₂_by (f : ℚ → ℚ → ℚ)
+  (h :
+    ∀x y : Cauchy,
+    ∀ε > 0,
+    ∃δ > 0,
+    ∀ m n,
+    |x.seq m - x.seq n| < δ →
+    |y.seq m - y.seq n| < δ →
+    |map₂ f x.seq y.seq m - map₂ f x.seq y.seq n| < ε
+  ) : lifts₂ f := by
+  intro x y ε ε_gt_0
+  let ⟨δ, δ_gt_0, h⟩ := h x y ε ε_gt_0
+  let ⟨N₁, x_conv⟩ := x.conv δ δ_gt_0
+  let ⟨N₂, y_conv⟩ := y.conv δ δ_gt_0
+  let N := max N₁ N₂
+  exists N
+  grind
 
-    exact conv m n x_conv
-  ⟩
+end lifts
 
-def lift₂ (x y : Cauchy) (f : Sequence ℚ → Sequence ℚ → Sequence ℚ) (conv : ∀ε > 0, ∃δx > 0, ∃δy > 0,
-   (∀ m n, (|x.seq m - x.seq n| < δx) → (|y.seq m - y.seq n| < δy) → |(f x.seq y.seq) m - (f x.seq y.seq) n| < ε))
-  : Cauchy := ⟨f x.seq y.seq, by
-    intro ε ε_gt_0
-
-    let ⟨δx, δx_gt_0, δy, δy_gt_0, conv⟩ := conv ε ε_gt_0
-
-    have x_conv := x.conv δx δx_gt_0
-    have y_conv := y.conv δy δy_gt_0
-
-    let N := max x_conv.choose y_conv.choose
-    exists N
-    intro m m_lt_N n n_lt_N
-
-    have x_conv := x_conv.choose_spec
-      m (sup_le_iff.mp m_lt_N).left
-      n (sup_le_iff.mp n_lt_N).left
-    have y_conv := y_conv.choose_spec
-      m (sup_le_iff.mp m_lt_N).right
-      n (sup_le_iff.mp n_lt_N).right
-
-    exact conv m n x_conv y_conv
-⟩
-
-def lift₂_single (x y : Cauchy) (f : Sequence ℚ → Sequence ℚ → Sequence ℚ) (conv : ∀ε > 0, ∃δ > 0,
-   (∀ m n, (|x.seq m - x.seq n| < δ) → (|y.seq m - y.seq n| < δ) → |(f x.seq y.seq) m - (f x.seq y.seq) n| < ε))
-  : Cauchy := ⟨f x.seq y.seq, by
-    intro ε ε_gt_0
-
-    let ⟨δ, δ_gt_0, conv⟩ := conv ε ε_gt_0
-
-    have x_conv := x.conv δ δ_gt_0
-    have y_conv := y.conv δ δ_gt_0
-
-    let N := max x_conv.choose y_conv.choose
-    exists N
-    intro m m_lt_N n n_lt_N
-
-    have x_conv := x_conv.choose_spec
-      m (sup_le_iff.mp m_lt_N).left
-      n (sup_le_iff.mp n_lt_N).left
-    have y_conv := y_conv.choose_spec
-      m (sup_le_iff.mp m_lt_N).right
-      n (sup_le_iff.mp n_lt_N).right
-
-    exact conv m n x_conv y_conv
-⟩
+section bounded
 
 def bounded_by (x : Cauchy) (M : ℚ) := ∀m, |x.seq m| ≤ M
 
@@ -103,6 +114,8 @@ def bounded_by_ge (x : Cauchy) (M : ℚ) (N : ℚ) : M ≤ N → x.bounded_by M 
   rw [bounded_by] at *
   grind
 
+
+-- TODO SIMPLIFY
 theorem bounded (x : Cauchy) : ∃M, x.bounded_by M := by
   unfold bounded_by
 
@@ -146,282 +159,230 @@ theorem bounded_by_pos (x : Cauchy) (M : ℚ) : x.bounded_by M → M ≥ 0 := by
   have M_ge := (x_bounded_by_M 0).ge
   grind
 
-theorem eq_by_seq {x y : Cauchy} : x = y ↔ x.seq = y.seq := by
-  apply Iff.intro
-  repeat
-    intro seq_eq
-    cases x
-    cases y
-    simp_all
+end bounded
 
-theorem eq_by_forall {x y : Cauchy} : x = y ↔ ∀n, x.seq n = y.seq n := by
-  apply Iff.intro
-  . intro x_eq_y n
-    subst x_eq_y
-    rfl
-  . intro h
-    apply eq_by_seq.mpr
-    funext n
-    exact (h n)
+section arithmetic
 
-theorem eq_const {x : Cauchy} {c : ℚ}: (∀i, x.seq i = c) → x = const c := by sorry
+theorem add_lifts : lifts₂ (·+·) := by
+  apply lifts₂_by
+  intro x y ε ε_gt_0
+  refine ⟨ε/2, by grind, ?_⟩
+  simp
+  grind
 
-instance : Add Cauchy where
-  add x y := by
-    apply lift₂_single x y (· + ·)
+instance : Add Cauchy := ⟨@lift₂ (·+·) add_lifts⟩
 
-    intro ε ε_gt_0
-    exists ε/2
-    apply And.intro (div_pos ε_gt_0 rfl)
-
-    intro m n x_conv y_conv
-
-    have := add_lt_add x_conv y_conv
-    simp [add_halves] at this
-    rw [<-gt_iff_lt] at *
-
-    calc
-      ε > |x.seq m - x.seq n| + |y.seq m - y.seq n| := this
-      _ ≥ |x.seq m - x.seq n + (y.seq m - y.seq n)| := (abs_add_le _ _).ge
-      _ = |x.seq m + y.seq m - (x.seq n + y.seq n)| := by
-        rw [@add_sub_assoc', @sub_add_eq_add_sub, tsub_tsub]
-
-theorem add_seq (x y : Cauchy) : (x + y).seq = x.seq + y.seq := by
-  rw (occs := .pos [1]) [HAdd.hAdd, instHAdd, Add.add, instAdd]
-  unfold lift₂_single
-  simp_all
+@[simp]
+theorem add_seq_on (x y : Cauchy) : ∀i, (x + y).seq i = x.seq i + y.seq i := by
+  rw [HAdd.hAdd, instHAdd]
+  simp [Add.add]
 
 theorem const_add (a b : ℚ) : const (a + b) = const a + const b := by rfl
 
-instance : Zero Cauchy where
-  zero := const 0
+instance : Zero Cauchy := ⟨const 0⟩
 
 @[simp]
-theorem seq_zero : seq 0 = 0 := neg_eq_zero.mp rfl
-
-@[simp]
-theorem zero_def : const 0 = 0 := by exact eq_by_seq.mpr rfl
-
-instance : Neg Cauchy where
-  neg x := by
-    apply x.lift (- ·)
-    intro ε ε_gt_0
-    exists ε
-    apply And.intro ε_gt_0
-    intro m n x_conv
-    rw [Neg.neg, Sequence.instNeg, <-abs_neg]
+theorem zero_seq_on : ∀i, seq 0 i = 0 := by
+  intro i
+  conv =>
+    lhs
+    rw [OfNat.ofNat, Zero.toOfNat0, Zero.zero, instZero]
     simp
-    rw [Rat.add_comm, ← Rat.sub_eq_add_neg]
-    exact x_conv
 
-theorem neg_seq (x : Cauchy) : (-x).seq = -x.seq := by
-  rw (occs := .pos [1]) [Neg.neg, instNeg]
-  unfold lift
+theorem neg_lifts : lifts (-·) := by
+  apply lifts_by
+  intro x ε ε_gt_0
+  refine ⟨ε, ε_gt_0, ?_⟩
+  simp
+  grind
+
+instance : Neg Cauchy := ⟨@lift (-·) neg_lifts⟩
+
+@[simp]
+theorem neg_seq_on (x : Cauchy) : ∀i, (-x).seq i = -x.seq i := by
+  rw [Neg.neg, instNeg]
   simp
 
-theorem const_neg (a : ℚ) : const (-a) = -const a := by rfl
-
---
 instance : Sub Cauchy where
-  sub x y := x + (-y)
-
-theorem sub_seq (x y : Cauchy) : (x - y).seq = x.seq - y.seq := by
-  sorry
-
-instance : Mul Cauchy where
-    mul x y := by
-      apply lift₂_single x y (· * ·)
-
-      let X := x.bounded.choose + 1
-      have h_X : x.bounded_by X := bounded_by_ge x x.bounded.choose X (by grind) x.bounded.choose_spec
-      have X_ge_1 : X ≥ 1 := by grind [x.bounded_by_pos x.bounded.choose x.bounded.choose_spec]
-
-      let Y := y.bounded.choose + 1
-      have h_Y : y.bounded_by Y := bounded_by_ge y y.bounded.choose Y (by grind) y.bounded.choose_spec
-      have Y_ge_1 : Y ≥ 1 := by grind [y.bounded_by_pos y.bounded.choose y.bounded.choose_spec]
-
-      intro ε ε_gt_0
-
-      let δ := ε/4/X/Y
-      have δ_gt_0 : δ > 0 := by
-        repeat (refine (Rat.lt_div_iff ?_).mpr ?_; grind; simp)
-        exact ε_gt_0
-
-      exists δ
-      apply And.intro δ_gt_0
-
-      intro m n x_conv y_conv
-      rw [<-gt_iff_lt] at *
-
-      calc
-      ε > ε/4 + ε/4 := by grind_linarith
-      _ ≥ ε/4/Y + ε/4/X := by
-        have lt : ∀a ≥ 1, ε/4 ≥ ε/4/a := by
-          intro a a_gt_1
-          rw [@div_right_comm]
-          gcongr
-          . rfl
-          . rw [Rat.div_def, (mul_le_iff_le_one_right ε_gt_0)]
-            exact inv_le_one_of_one_le₀ a_gt_1
-        grind [lt X X_ge_1, lt Y Y_ge_1]
-      _ = X*ε/4/X/Y + Y*ε/4/X/Y := by grind
-      _ ≥ |x.seq m| * ε/4/X/Y + |y.seq n| * ε/4/X/Y := by
-        gcongr <;> grind [h_X m, h_Y n]
-      _ = |x.seq m| * δ + |y.seq n| * δ := by subst δ; grind
-      _ ≥ |x.seq m| * |y.seq m - y.seq n| + |y.seq n| * |x.seq m - x.seq n| := by
-        gcongr
-        . exact abs_nonneg (x.seq m)
-        . exact abs_nonneg (y.seq n)
-      _ = |x.seq m * (y.seq m - y.seq n)| + |y.seq n * (x.seq m - x.seq n)| := by simp [abs_mul]
-      _ ≥ |x.seq m * (y.seq m - y.seq n) + y.seq n * (x.seq m - x.seq n)| := abs_add_le _ _
-      _ = |x.seq m * y.seq m - x.seq n * y.seq n| := by grind [mul_sub]
-      _ = |(x.seq * y.seq) m - (x.seq * y.seq) n| := by simp [Sequence.mul_distrib]
-
-theorem mul_seq (x y : Cauchy) : (x * y).seq = x.seq * y.seq := by
-  rw (occs := .pos [1]) [HMul.hMul, instHMul, Mul.mul, instMul]
-  unfold lift₂_single
-  simp_all
-
-theorem const_mul (a b : ℚ) : const (a * b) = const a * const b := by rfl
-
-instance : One Cauchy where
-    one := const 1
-
-theorem one_def : const 1 = 1 := by exact eq_by_seq.mpr rfl
+  sub a b := a + -b
 
 @[simp]
-theorem one_seq : seq 1 = Sequence.const 1 := by rfl
+theorem sub_seq_on (x y : Cauchy) : ∀i, (x - y).seq i = x.seq i - y.seq i := by
+  rw [HSub.hSub, instHSub]
+  simp [Sub.sub, sub_eq_add_neg]
+
+theorem mul_lifts : lifts₂ (·*·) := by
+  apply lifts₂_by
+  intro x y
+
+  let X := x.bounded.choose + 1
+  have h_X : x.bounded_by X := bounded_by_ge x x.bounded.choose X (by grind) x.bounded.choose_spec
+  have X_ge_1 : X ≥ 1 := by grind [x.bounded_by_pos x.bounded.choose x.bounded.choose_spec]
+
+  let Y := y.bounded.choose + 1
+  have h_Y : y.bounded_by Y := bounded_by_ge y y.bounded.choose Y (by grind) y.bounded.choose_spec
+  have Y_ge_1 : Y ≥ 1 := by grind [y.bounded_by_pos y.bounded.choose y.bounded.choose_spec]
+
+  intro ε ε_gt_0
+
+  let δ := ε/4/X/Y
+  have δ_gt_0 : δ > 0 := by
+    repeat (refine (Rat.lt_div_iff ?_).mpr ?_; grind; simp)
+    exact ε_gt_0
+
+  refine ⟨δ, δ_gt_0, ?_⟩
+
+  intro m n x_conv y_conv
+
+  calc
+    ε > ε/4 + ε/4 := by grind
+    _ ≥ ε/4/Y + ε/4/X := by
+      have lt : ∀a ≥ 1, ε/4 ≥ ε/4/a := by
+        intro a a_gt_1
+        rw [@div_right_comm]
+        gcongr
+        . rfl
+        . rw [Rat.div_def, (mul_le_iff_le_one_right ε_gt_0)]
+          exact inv_le_one_of_one_le₀ a_gt_1
+      grind [lt X X_ge_1, lt Y Y_ge_1]
+    _ = X*ε/4/X/Y + Y*ε/4/X/Y := by grind
+    _ ≥ |x.seq m| * ε/4/X/Y + |y.seq n| * ε/4/X/Y := by
+      gcongr <;> grind [h_X m, h_Y n]
+    _ = |x.seq m| * δ + |y.seq n| * δ := by subst δ; grind
+    _ ≥ |x.seq m| * |y.seq m - y.seq n| + |y.seq n| * |x.seq m - x.seq n| := by
+      gcongr
+      . exact abs_nonneg (x.seq m)
+      . exact abs_nonneg (y.seq n)
+    _ = |x.seq m * (y.seq m - y.seq n)| + |y.seq n * (x.seq m - x.seq n)| := by simp [abs_mul]
+    _ ≥ |x.seq m * (y.seq m - y.seq n) + y.seq n * (x.seq m - x.seq n)| := abs_add_le _ _
+    _ = |x.seq m * y.seq m - x.seq n * y.seq n| := by grind [mul_sub]
+
+instance : Mul Cauchy := ⟨@lift₂ (·*·) mul_lifts⟩
+
+@[simp]
+theorem mul_seq_on (x y : Cauchy) : ∀i, (x * y).seq i = x.seq i * y.seq i := by
+  rw [HMul.hMul, instHMul]
+  simp [Mul.mul]
+
+instance : One Cauchy := ⟨const 1⟩
+
+@[simp]
+theorem one_seq_on : ∀i, seq 1 i = 1 := by
+  intro i
+  conv =>
+    lhs
+    rw [OfNat.ofNat, One.toOfNat1, One.one, instOne]
+    simp
 
 instance : CommRing Cauchy where
   add_assoc x y z := by
-    rw [eq_by_seq]
-    exact add_assoc _ _ _
+    apply eq_by_forall
+    grind [add_seq_on]
 
   zero_add x := by
-    rw [eq_by_seq]
-    exact zero_add _
+    apply eq_by_forall
+    simp [add_seq_on]
 
   add_zero x := by
-    rw [eq_by_seq]
-    exact add_zero _
-
-  nsmul s x := const s * x
-
-  nsmul_zero x := by
-    simp [eq_by_seq, mul_seq]
-
-  nsmul_succ n x := by
-    simp [const_add, eq_by_seq, mul_seq, add_seq, add_mul]
+    apply eq_by_forall
+    simp [add_seq_on]
 
   add_comm x y := by
-    rw [eq_by_seq]
-    exact add_comm _ _
-
-  left_distrib x y z := by
-    rw [eq_by_seq]
-    exact left_distrib _ _ _
-
-  right_distrib x y z := by
-    rw [eq_by_seq]
-    exact right_distrib _ _ _
-
-  zero_mul x := by
-      rw [eq_by_seq]
-      exact zero_mul _
-
-  mul_zero x := by
-      rw [eq_by_seq]
-      exact mul_zero _
-
-  mul_assoc x y z := by
-      rw [eq_by_seq]
-      exact mul_assoc _ _ _
-
-  one_mul x := by
-      rw [eq_by_seq]
-      exact one_mul _
-
-  mul_one x := by
-      rw [eq_by_seq]
-      exact mul_one _
-
-  zsmul z x := const z * x
-
-  zsmul_zero' x := by
-      simp [eq_by_seq, mul_seq]
-
-  zsmul_succ' z x := by
-      simp [const_add, eq_by_seq, mul_seq, add_seq, add_mul]
-
-  zsmul_neg' z x := by
-      simp [const_add, const_neg, eq_by_seq, add_seq, neg_seq, mul_seq]
-      grind
+    apply eq_by_forall
+    grind [add_seq_on]
 
   neg_add_cancel x := by
-    rw [eq_by_seq]
-    exact neg_add_cancel _
+    apply eq_by_forall
+    simp [add_seq_on, neg_seq_on]
+
+  left_distrib x y z := by
+    apply eq_by_forall
+    grind [add_seq_on, mul_seq_on]
+
+  right_distrib x y z := by
+    apply eq_by_forall
+    grind [add_seq_on, mul_seq_on]
+
+  zero_mul x := by
+    apply eq_by_forall
+    simp [mul_seq_on]
+
+  mul_zero x := by
+    apply eq_by_forall
+    simp [mul_seq_on]
+
+  mul_assoc x y z := by
+    apply eq_by_forall
+    grind [mul_seq_on]
+
+  one_mul x := by
+    apply eq_by_forall
+    simp [mul_seq_on]
+
+  mul_one x := by
+    apply eq_by_forall
+    simp [mul_seq_on]
 
   mul_comm x y := by
-    rw [eq_by_seq]
-    exact mul_comm _ _
+    apply eq_by_forall
+    grind [mul_seq_on]
 
-abbrev eqv_zero (x : Cauchy) := x.seq.limit 0
+  nsmul := nsmulRec
+  zsmul := zsmulRec
 
-theorem zero_eqv_zero : eqv_zero 0 := by
-  sorry
+end arithmetic
 
-theorem nz_gt_zero (x : Cauchy) (x_nz : ¬x.eqv_zero) : ∃N, ∃m > 0, ∀n ≥ N, |x.seq n| ≥ m := by
-  sorry
+section equivalence
 
+abbrev eqv_zero (s : Sequence ℚ) := ∀ε > 0, ∃N, ∀n ≥ N, |s n - 0| < ε
 
 instance : Setoid Cauchy where
-  r x y := eqv_zero (x - y)
+  r x y := eqv_zero (x - y).seq
   iseqv := by
     apply Equivalence.mk
 
     case refl =>
       intro x ε ε_gt_0
       exists 1
-      intro n n_gt_1
       simp
-      exact ε_gt_0
+      grind
 
     case symm =>
       intro x y h
-      rw [eqv_zero, <-Sequence.neg_limit_zero]
-      simpa [<-neg_seq] using h
+      simp [eqv_zero, sub_seq_on] at h
+      simpa [eqv_zero, sub_seq_on, abs_sub_comm]
 
     case trans =>
-        -- TODO figure out how use lift
         intro x y z x_eqv_y y_eqv_z ε ε_gt_0
 
-        have x_eqv_y := x_eqv_y (ε/2) (div_pos ε_gt_0 rfl)
-        have y_eqv_z := y_eqv_z (ε/2) (div_pos ε_gt_0 rfl)
+        have ⟨N₁, x_eqv_y⟩ := x_eqv_y (ε/2) (div_pos ε_gt_0 rfl)
+        have ⟨N₂, y_eqv_z⟩ := y_eqv_z (ε/2) (div_pos ε_gt_0 rfl)
 
-        let N := max x_eqv_y.choose y_eqv_z.choose
+        let N := max N₁ N₂
         exists N
-        intro n n_gt_N
+        intro n n_ge_N
+        simp [sub_seq_on] at *
+        grind
 
-        have x_eqv_y := x_eqv_y.choose_spec n (sup_le_iff.mp n_gt_N).left
-        have y_eqv_z := y_eqv_z.choose_spec n (sup_le_iff.mp n_gt_N).right
+theorem not_equiv {x y : Cauchy} : ¬x ≈ y = ∃ε > 0, ∀N, ∃n ≥ N, |x.seq n - y.seq n| ≥ ε := by
+  unfold HasEquiv.Equiv instHasEquivOfSetoid instSetoid
+  simp
 
-        have := add_lt_add x_eqv_y y_eqv_z
-        simp [add_halves] at this
-        rw [<-gt_iff_lt] at *
-        simp [-gt_iff_lt]
-        calc
-            ε > |x.seq n - y.seq n| + |y.seq n - z.seq n| := sorry
-            _ ≥ |x.seq n - y.seq n + (y.seq n - z.seq n)| := by grind
-            _ ≥ |x.seq n - z.seq n| := by simp
-            _ = |(x - z).seq n| := by sorry
+theorem nz_gt_zero (x : Cauchy) (x_nz : ¬x ≈ 0) : ∃m > 0, ∃N, ∀n ≥ N, |x.seq n| ≥ m := by
+  simp [not_equiv] at x_nz
+  let ⟨ε, ε_gt_0, limit⟩ := x_nz
+  refine ⟨ε/2, by grind, ?_⟩
 
-def equiv_iff (x y : Cauchy) : (∀ε > 0, ∃N, ∀n ≥ N, |x.seq n - y.seq n| < ε) ↔ (x ≈ y) := by
-  rw [HasEquiv.Equiv, instHasEquivOfSetoid, instSetoid]
-  simp [eqv_zero, Sequence.limit]
-  simp [sub_seq, Sequence.sub_distrib]
+  let ⟨N, x_conv⟩ := x.conv (ε/2) (by grind)
+  exists N
+  intro n n_ge_N
 
-def inv_exists (x : Cauchy) (x_nz : ¬x.eqv_zero) : ∃y : Cauchy, x * y ≈ 1 := by
-  let ⟨N, m, m_gt_0, h_m⟩ := nz_gt_zero x x_nz
+  have ⟨m, m_ge_N, h_m⟩ := limit N
+  have x_conv := x_conv m m_ge_N n n_ge_N
+  grind
+
+theorem inv_exists (x : Cauchy) (x_nz : ¬x ≈ 0) : ∃y : Cauchy, x * y ≈ 1 := by
+  let ⟨m, m_gt_0, N, h_m⟩ := nz_gt_zero x x_nz
 
   let y_seq : Sequence ℚ := fun i ↦ if i ≥ N then (x.seq i)⁻¹ else 0
   let y : Cauchy := ⟨y_seq, ?_⟩
@@ -432,11 +393,8 @@ def inv_exists (x : Cauchy) (x_nz : ¬x.eqv_zero) : ∃y : Cauchy, x * y ≈ 1 :
     intro i i_ge_N
     subst y
 
-    simp [*, sub_seq, mul_seq, Sequence.sub_distrib, Sequence.mul_distrib, y_seq]
-
-    have : x.seq i ≠ 0 := by grind
-
-    simpa [Rat.mul_inv_cancel _ this] using ε_gt_0
+    simp [y_seq, ]
+    grind
 
   . intro ε ε_gt_0
     have h_m2 : m^2 > 0 := Rat.pow_pos m_gt_0
@@ -465,53 +423,85 @@ def inv_exists (x : Cauchy) (x_nz : ¬x.eqv_zero) : ∃y : Cauchy, x * y ≈ 1 :
 
 noncomputable instance : Inv Cauchy where
   inv x := by
-    by_cases x.eqv_zero
+    by_cases x ≈ 0
     case pos _ => exact 0
     case neg h_x => exact Classical.choose (x.inv_exists h_x)
 
-theorem mul_inv_cancel {x : Cauchy} (x_nz : ¬x.eqv_zero) : x * x⁻¹ ≈ 1 := by
+abbrev interleave {x y : Cauchy} (x_eqv_y : x ≈ y) : Cauchy := by
+  let s : Sequence ℚ := fun i ↦ if Even i then x.seq (i/2) else y.seq (i/2)
+  refine ⟨s, ?_⟩
+  intro ε ε_gt_0
+  let ⟨N₁, x_conv⟩ := x.conv (ε/2) (by grind)
+  let ⟨N₂, y_conv⟩ := y.conv (ε/2) (by grind)
+  let ⟨N₃, eqv⟩ := x_eqv_y (ε/2) (by grind)
+  simp [] at eqv
+  let N := 2 * max N₁ (max N₂ N₃)
+  exists N
+  intro m m_ge_N n n_ge_N
+  have x_conv := x_conv (m/2) (by grind) (n/2) (by grind)
+  have y_conv := y_conv (m/2) (by grind) (n/2) (by grind)
+
+  unfold s
+  split <;> split <;> grind
+
+theorem lift_eqv (f : ℚ → ℚ) {h_f : lifts f} {x y : Cauchy} (x_eqv_y : x ≈ y) : @lift f h_f x ≈ @lift f h_f y := by
+  let z : Cauchy := @lift f h_f $ interleave x_eqv_y
+
+  intro ε ε_gt_0
+  let ⟨N, z_conv⟩ := z.conv ε ε_gt_0
+
+  exists N
+  intro n n_ge_N
+  simp [z, sub_seq_on] at *
+  have z_conv := z_conv (2*n) (by grind) (2*n+1) (by grind)
+  grind
+
+theorem lift₂_eqv (f : ℚ → ℚ → ℚ) {h_f : lifts₂ f} {x₁ x₂ y₁ y₂ : Cauchy}
+                  : x₁ ≈ x₂ → y₁ ≈ y₂ → @lift₂ f h_f x₁ y₁ ≈ @lift₂ f h_f x₂ y₂ := by
+  intro x₁_eqv_x₂ y₁_eqv_y₂ ε ε_gt_0
+  simp [lifts₂, converges] at h_f
+
+  let x := interleave x₁_eqv_x₂
+  let y := interleave y₁_eqv_y₂
+  let z := @lift₂ f h_f x y
+  let ⟨N, z_conv⟩ := z.conv ε ε_gt_0
+
+  exists N
+  intro n n_ge_N
+  simp [z] at *
+  have z_conv := z_conv (2*n) (by grind) (2*n+1) (by grind)
+  grind
+
+theorem mul_inv_eqv {x : Cauchy} (x_nz : ¬x ≈ 0) : x * x⁻¹ ≈ 1 := by
   simp [Inv.inv]
   rw [dite_cond_eq_false (eq_false x_nz)]
   grind
 
--- EQUIVS TODO
+theorem add_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁+y₁ ≈ x₂+y₂ := by apply lift₂_eqv (·+·)
 
-theorem add_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁+y₁ ≈ x₂+y₂ := by
-  rw [HasEquiv.Equiv, instHasEquivOfSetoid, instSetoid]
-  simp [-gt_iff_lt]
-  intro x₁_eqv_x₂ y₁_eqv_y₂ ε ε_gt_0
+theorem neg_eqv {x y : Cauchy} : x ≈ y →  (-x) ≈ (-y) := by apply lift_eqv (-·)
 
-  let δ := ε/2
-  have δ_gt_0 : δ > 0 := sorry
-
-  have ⟨N, x₁_eqv_x₂⟩ := x₁_eqv_x₂ δ δ_gt_0
-  have ⟨N, y₁_eqv_y₂⟩ := y₁_eqv_y₂ δ δ_gt_0
-  sorry
-
-theorem neg_eqv {x y : Cauchy} : x ≈ y → (-x) ≈ (-y) := by
-  sorry
-
-theorem mul_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁*y₁ ≈ x₂*y₂ := by
-  sorry
+theorem mul_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁*y₁ ≈ x₂*y₂ := by apply lift₂_eqv (·*·)
 
 theorem sub_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → x₁-y₁ ≈ x₂-y₂ := by
-  sorry
+  simp [sub_eq_add_neg]
+  grind only [add_eqv, neg_eqv]
 
-theorem pow_eqv {x y : Cauchy} {n : ℕ} : x ≈ y → x ^ n ≈ y ^ n := by sorry
+theorem pow_eqv {x y : Cauchy} {n : ℕ} : x ≈ y → x ^ n ≈ y ^ n := by
+  intro x_eqv_y
+  sorry
 
 theorem smul_eqv {x y : Cauchy} (z : ℤ) : x ≈ y → z • x ≈ z • y := by sorry
 
-theorem inv_eqv {x y : Cauchy} : x ≈ y → x⁻¹ ≈ y⁻¹ := by
+theorem inv_eqv {x y : Cauchy} (x_eqv_y : x ≈ y) : x⁻¹ ≈ y⁻¹ := by
   sorry
+
 
 theorem one_neqv_zero : ¬(1 : Cauchy) ≈ 0 := by
   intro h
   rw [HasEquiv.Equiv, instHasEquivOfSetoid, instSetoid] at h
-  simp [eqv_zero] at h
-  apply Sequence.limit_not_const 1 0 (by norm_num) h
+  sorry
 
-instance : Coe ℚ Cauchy where
-  coe q := const q
-
+end equivalence
 
 end Cauchy
