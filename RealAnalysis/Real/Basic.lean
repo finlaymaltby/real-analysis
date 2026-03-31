@@ -1,6 +1,12 @@
 import RealAnalysis.Real.Cauchy
 import RealAnalysis.Real.Completion
 
+import Mathlib.Algebra.Order.Archimedean.Basic
+-- import Mathlib.Topology.MetricSpace.Defs
+import Mathlib.Topology.Defs.Basic
+
+
+
 structure Real where
     cauchy : Completion
 
@@ -76,6 +82,7 @@ instance : CommRing ℝ where
     right_distrib a b c := by apply eq_iff.mpr; simp only [cauchy_add, cauchy_mul, add_mul]
     neg_add_cancel a := by apply eq_iff.mpr; simp [cauchy_add, cauchy_neg, cauchy_zero]
 
+
 noncomputable instance : Field ℝ where
     inv := lift (Inv.inv)
     mul_inv_cancel a a_neq_0 := by
@@ -91,6 +98,26 @@ noncomputable instance : Field ℝ where
     nnqsmul := _
     qsmul := _
 
+-- Order
+instance : LE ℝ where
+    le := sorry
 
+instance : LinearOrder ℝ := sorry
+
+instance : Lattice ℝ := sorry
+
+instance : DistribLattice ℝ := sorry
+
+instance : Archimedean ℝ where
+    arch x y y_pos := by
+        sorry
+
+-- Topology
+-- maybe no metric space, requires lean4 ℝ
+-- instance : MetricSpace ℝ := sorry
+
+-- instance : CompleteSpace ℝ := sorry
+
+-- instance : NormedField ℝ := sorry
 
 end Real

@@ -531,4 +531,23 @@ theorem inv_eqv {x y : Cauchy} : x ≈ y → x⁻¹ ≈ y⁻¹ := by
 
 end equivalence
 
+section order
+
+instance instLE : LE Cauchy where
+  le x y := ∃N, ∀n ≥ N, x.seq n ≥ y.seq n
+
+theorem le_eqv {x₁ y₁ x₂ y₂ : Cauchy} : x₁ ≈ x₂ → y₁ ≈ y₂ → (x₁ ≤ y₁) = (x₂ ≤ y₂) := by
+  intro x_eqv y_eqv
+  by_cases h_le : x₁ ≤ y₁
+  case pos =>
+    simp [h_le]
+    sorry
+    --let ⟨N,h_N⟩ := h_le
+  unfold LE.le instLE
+  simp
+  sorry
+
+
+end order
+
 end Cauchy
