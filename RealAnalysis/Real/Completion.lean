@@ -6,53 +6,44 @@ namespace Completion
 
 instance : Add Completion := ⟨Quotient.map₂ (· + ·) (fun _ _ h_a _ _ h_b => Cauchy.add_eqv h_a h_b)⟩
 
+theorem mk_add {a b : Cauchy} : ⟦a⟧ + ⟦b⟧ = (⟦a + b⟧ : Completion) := by rfl
+
 instance : Zero Completion := ⟨⟦0⟧⟩
 
-def zero_def : (0 : Completion) = ⟦0⟧ := by rfl
+def mk_zero : (0 : Completion) = ⟦0⟧ := by rfl
 
 instance : Neg Completion := ⟨Quotient.map (- ·) (fun _ _ h => Cauchy.neg_eqv h)⟩
 
+theorem mk_neg {a : Cauchy} : -⟦a⟧  = (⟦-a⟧ : Completion) := by rfl
+
 instance : Mul Completion := ⟨Quotient.map₂ (· * ·) (fun _ _ h_a _ _ h_b => Cauchy.mul_eqv h_a h_b)⟩
 
-theorem mk_mul {x y : Cauchy} : ⟦x⟧ * ⟦y⟧ = (⟦x * y⟧ : Completion) := by
-  rw [HMul.hMul, instHMul]
-  simp [Mul.mul]
+theorem mk_mul {a b : Cauchy} : ⟦a⟧ * ⟦b⟧ = (⟦a * b⟧ : Completion) := by rfl
 
 instance : One Completion := ⟨⟦1⟧⟩
 
-instance : IntCast Completion := ⟨Quotient.mk' ∘ IntCast.intCast⟩
+theorem mk_one : (1 : Completion) = ⟦1⟧ := by rfl
 
-instance : NatCast Completion := ⟨Quotient.mk' ∘ NatCast.natCast⟩
+instance : CommRing Completion where
+  nsmul := nsmulRec
+  zsmul := zsmulRec
 
-instance : Pow Completion ℕ where
-  pow a n := Quotient.map (· ^ n) (fun _ _ h => Cauchy.pow_eqv h) a
+  add_zero := by simp [Quotient.forall, mk_add, mk_zero]
+  zero_add := by simp [Quotient.forall, mk_add, mk_zero]
+  add_comm := by simp [Quotient.forall, mk_add, add_comm]
+  add_assoc := by simp [Quotient.forall, mk_add, add_assoc]
+  neg_add_cancel := by
+    simp [Quotient.forall, mk_add, mk_neg, mk_zero, neg_add_cancel]
 
-instance : SMul ℤ Completion where
-  smul z := Quotient.map (z • ·) (fun _ _ h => Cauchy.smul_eqv z h)
+  mul_zero := by simp [Quotient.forall, mk_mul, mk_zero]
+  zero_mul := by simp [Quotient.forall, mk_mul, mk_zero]
+  mul_one := by simp [Quotient.forall, mk_mul, mk_one]
+  one_mul := by simp [Quotient.forall, mk_mul, mk_one]
+  mul_comm := by simp [Quotient.forall, mk_mul, mul_comm]
+  mul_assoc := by simp [Quotient.forall, mk_mul, mul_assoc]
 
-instance : SMul ℕ Completion where
-  smul n := Quotient.map ((n : ℤ) • ·) (fun _ _ h => Cauchy.smul_eqv n h)
-
-instance : Sub Completion :=
-  ⟨Quotient.map₂ (· - ·) (fun _ _ h_a _ _ h_b => Cauchy.sub_eqv h_a h_b)⟩
-
-instance : CommRing Completion := fast_instance% by
-  apply Function.Surjective.commRing Quotient.mk' (Quotient.mk'_surjective)
-  . rfl
-  . rfl
-  . exact (fun a b => rfl)
-  . exact (fun a b => rfl)
-  . exact (fun a => rfl)
-  . exact (fun a b => rfl)
-  . intro n x
-    apply Quotient.eq_iff_equiv.mpr
-    simpa using Setoid.refl (n * x)
-  . intro z x
-    apply Quotient.eq_iff_equiv.mpr
-    simpa using Setoid.refl (z * x)
-  . exact (fun x n => rfl)
-  . exact (fun a => rfl)
-  . exact (fun a => rfl)
+  left_distrib := by simp [Quotient.forall, mk_add, mk_mul, left_distrib]
+  right_distrib := by simp [Quotient.forall, mk_add, mk_mul, right_distrib]
 
 noncomputable instance : Field Completion where
   inv := Quotient.map (Inv.inv) @Cauchy.inv_eqv
@@ -62,13 +53,11 @@ noncomputable instance : Field Completion where
     simp [Quotient.map_mk, mk_mul]
 
     apply Quotient.eq_iff_equiv.mpr
-    apply Cauchy.mul_inv_eqv
-
-    simp [zero_def, Quotient.eq_iff_equiv] at a_neq_0
-    exact a_neq_0
+    refine Cauchy.mul_inv_eqv_cancel ?_
+    simpa [<-Quotient.eq_iff_equiv]
 
   inv_zero := by
-    simp [zero_def, Quotient.eq_iff_equiv, Inv.inv]
+    simp [mk_zero, Quotient.eq_iff_equiv, Inv.inv]
     rw [dite_cond_eq_true (eq_true (Setoid.refl 0))]
     exact Setoid.refl 0
 
