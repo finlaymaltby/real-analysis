@@ -252,9 +252,6 @@ theorem inv_converges {x : 𝕊 α} (h_x : x ⟶ A) (A_nz : A ≠ 0) : x⁻¹ �
   sorry
 
 
-end converges_arithmetic
-
-
 end limits
 
 end Sequence
