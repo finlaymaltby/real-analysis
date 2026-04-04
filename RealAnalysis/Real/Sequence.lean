@@ -245,12 +245,37 @@ theorem eqv_iff {x y : 𝕊 α} : x ≈ y ↔ (x - y).converges_to 0 := by
 
 theorem eqv_zero_iff_converges_zero {x : 𝕊 α} : x ⟶ 0 ↔ x ≈ 0 := by simp [eqv_iff]
 
-theorem inv_converges {x : 𝕊 α} (h_x : x ⟶ A) (A_nz : A ≠ 0) : x⁻¹ ⟶ A⁻¹ := by
-  have h_x : ¬(x ⟶ 0) := fun h_zero ↦ A_nz (converges_unique h_x h_zero)
-  simp [converges_to] at h_x
-  let ⟨ε, ε_pos, h_x⟩ := h_x
-  sorry
+theorem converges_nz_gt_zero {x : 𝕊 α} (h_x : x ⟶ L) (L_nz : L ≠ 0) : ∃m > 0, ∃N, ∀i > N, |x i| > m := by
+  refine ⟨|L|/2, by grind, ?_⟩
+  let ⟨N, h_x⟩ := h_x (|L|/2) (by grind)
+  exists N
+  grind
 
+theorem inv_converges {x : 𝕊 α} (h_x : x ⟶ A) (A_nz : A ≠ 0) : x⁻¹ ⟶ A⁻¹ := by
+  have : |A - 1| ≥ 0 := by grind
+  let ⟨m, m_pos, N₁, h_m⟩ := converges_nz_gt_zero h_x A_nz
+
+  intro ε ε_pos
+  let δ := ε/2 * m * |A|
+  have : δ > 0 := by
+    repeat apply Left.mul_pos
+    repeat grind
+
+  let ⟨N₂, h_x⟩ := h_x δ (by grind)
+  let N := max N₁ N₂
+  exists N
+  intro i i_gt_N
+  calc
+    ε > ε/2 := by grind
+    _ = ε/2 * m * |A| / |A| / m := by grind
+    _ > |x i - A|/|A|/m := by gcongr <;> grind
+    _ ≥ |x i - A|/|A|/|x i| := by gcongr; simp [div_nonneg]; grind
+    _ = |x i - A|/(|A| * |x i|) := by grind
+    _ = |x i - A|/|A * x i| := by simp
+    _ = |(x i - A)/(A * x i)| := by grind [abs_div]
+    _ = |(x i)/ (A * x i) - A/(x i * A)| := by grind
+    _ = |(x i)⁻¹ - A⁻¹| := by grind
+    _ = |x⁻¹ i - A⁻¹| := by grind [inv_on]
 
 end limits
 
