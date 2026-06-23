@@ -88,7 +88,6 @@ instance [CommRing α] : CommRing (𝕊 α) where
   nsmul := nsmulRec
   zsmul := zsmulRec
 
-
 @[simp]
 theorem sub_on [CommRing α] (x y : 𝕊 α) {i : ℕ} : (x - y) i = x i - y i := by simp [sub_eq_add_neg]
 
@@ -100,8 +99,22 @@ variable {α : Type} [Field α] [LinearOrder α]
 
 def converges_to (x : 𝕊 α) (L : α) := ∀ε > 0, ∃(N : ℕ), ∀i > N, |x i - L| < ε
 infix:50 "⟶" => converges_to
+def converges (x : 𝕊 α) := ∃L, x ⟶ L
 
-theorem neg_converges {x : 𝕊 α} (h_x : x ⟶ A) : (-x) ⟶ (-A) := by
+def bounded_by (x : 𝕊 α) (M : α) := M > 0 ∧ ∀i, |x i| ≤ M
+def bounded (x : 𝕊 α) := ∃M, x.bounded_by M
+
+def monotone_increasing (x : 𝕊 α) := ∀i j, i ≤ j → x i ≤ x j
+def monotone_decreasing (x : 𝕊 α) := ∀i j, i ≤ j → x i ≤ x j
+def monotone (x : 𝕊 α) := monotone_increasing x ∨ monotone_decreasing x
+
+def cauchy (x : 𝕊 α) := ∀ε > 0, ∃N, ∀i > N, ∀j > N, |x i - x j| < ε
+
+-- converges
+
+variable {x y : 𝕊 α}
+
+theorem neg_converges (h_x : x ⟶ A) : (-x) ⟶ (-A) := by
   intro ε ε_pos
   let ⟨N, h_N⟩ := h_x ε ε_pos
   exists N
@@ -111,12 +124,9 @@ theorem neg_converges {x : 𝕊 α} (h_x : x ⟶ A) : (-x) ⟶ (-A) := by
   simp [add_comm, <-sub_eq_add_neg]
   exact h_N i i_ge_N
 
-def bounded_by (x : 𝕊 α) (M : α) := M > 0 ∧ ∀i, |x i| ≤ M
-def monotone (x : 𝕊 α) := ∀i j, i ≤ j → x i ≤ x j
-
 variable [IsStrictOrderedRing α]
 
-theorem converges_unique {x : 𝕊 α} (h_A : x ⟶ A) (h_B : x ⟶ B) : A = B := by
+theorem converges_unique (h_A : x ⟶ A) (h_B : x ⟶ B) : A = B := by
   by_contra! h
   have : |A - B| > 0 := abs_pos.mpr (sub_ne_zero_of_ne h)
   let ε := |A - B|/2
@@ -130,12 +140,12 @@ theorem converges_unique {x : 𝕊 α} (h_A : x ⟶ A) (h_B : x ⟶ B) : A = B :
   have h_Nb := h_Nb (N + 1) (by grind)
   grind
 
-theorem converges_le_bound_from {x : 𝕊 α} {L : α} (h_x : converges_to x L) : ∃N, ∀i > N, |x i| ≤ |L| + 1 := by
+theorem converges_le_bound_from {L : α} (h_x : x.converges_to L) : ∃N, ∀i > N, |x i| ≤ |L| + 1 := by
   let ⟨N, _⟩ := h_x 1 (zero_lt_one)
   exists N
   grind
 
-theorem converges_bounded {x : 𝕊 α} {L : α} (h_x : converges_to x L) : ∃M, x.bounded_by M := by
+theorem converges_bounded {L : α} (h_x : x.converges_to L) : x.bounded := by
   let ⟨N, h_N⟩ := converges_le_bound_from h_x
   have : |L| + 1 > 0 := add_pos_of_nonneg_of_pos (abs_nonneg L) zero_lt_one
 
@@ -154,7 +164,7 @@ theorem converges_bounded {x : 𝕊 α} {L : α} (h_x : converges_to x L) : ∃M
   refine ⟨M, by grind, ?_⟩
   grind
 
-theorem add_converges {x y : 𝕊 α} (h_x : x ⟶ A) (h_y : y ⟶ B) : (x + y) ⟶ A + B := by
+theorem add_converges (h_x : x ⟶ A) (h_y : y ⟶ B) : (x + y) ⟶ A + B := by
   intro ε ε_pos
   let δ := ε/2
   have δ_pos : δ > 0 := div_pos ε_pos zero_lt_two
@@ -174,11 +184,11 @@ theorem add_converges {x y : 𝕊 α} (h_x : x ⟶ A) (h_y : y ⟶ B) : (x + y) 
     _ = |x i + y i - (A + B)| := by grind
     _ = |(x + y) i - (A + B)| := by simp [<-add_on]
 
-theorem sub_converges {x y : 𝕊 α} (h_x : x ⟶ A) (h_y : y ⟶ B) : (x - y) ⟶ A - B := by
+theorem sub_converges (h_x : x ⟶ A) (h_y : y ⟶ B) : (x - y) ⟶ A - B := by
   simp [sub_eq_add_neg]
   exact add_converges h_x (neg_converges h_y)
 
-theorem mul_converges {x y : 𝕊 α} (h_x : x ⟶ A) (h_y : y ⟶ B) : (x * y) ⟶ A * B := by
+theorem mul_converges (h_x : x ⟶ A) (h_y : y ⟶ B) : (x * y) ⟶ A * B := by
   let ⟨N₁ , h_N₁⟩ := converges_le_bound_from h_x
   let h_A_pos := add_pos_of_nonneg_of_pos (abs_nonneg A) zero_lt_one
 
@@ -210,50 +220,35 @@ theorem mul_converges {x y : 𝕊 α} (h_x : x ⟶ A) (h_y : y ⟶ B) : (x * y) 
     _ = |(x i) * (y i) - A * B| := by grind
     _ = |(x * y) i - A * B| := by simp
 
-instance : Setoid (Sequence α) where
-  r x y := (x - y).converges_to 0
-  iseqv := by
-    apply Equivalence.mk
+theorem eqv_zero_mul_bounded_eqv_zero(h_x : x ⟶ 0) (h_y : y.bounded) : x * y ⟶ 0 := by
+  let ⟨M, M_pos, h_y⟩ := h_y
+  intro ε ε_pos
 
-    case refl =>
-      intro x ε ε_pos
-      exists 0
-      simp
-      grind
+  let δ := ε/(2 * M)
+  have δ_pos : δ > 0 := by exact div_pos ε_pos (by grind)
+  let ⟨N, h_N⟩ := h_x δ δ_pos
+  exists N
+  intro i i_gt_N
 
-    case symm =>
-      intro x y h
+  calc
+    ε > ε/2 := by grind
+    _ = ε/(2 * M) * M := by grind
+    _ ≥ |x i| * |y i| := by gcongr <;> grind
+    _ = |x i * y i| := by grind [abs_mul]
+    _ = |(x * y) i - 0| := by grind [mul_on]
 
-      simp [converges_to] at h
-      simpa [converges_to, abs_sub_comm]
+theorem bounded_mul_eqv_zero_eqv_zero (h_x : x.bounded) (h_y : y ⟶ 0) : x * y ⟶ 0 := by
+  grind [mul_comm, eqv_zero_mul_bounded_eqv_zero]
 
-    case trans =>
-        intro x y z x_eqv_y y_eqv_z ε ε_pos
-
-        have ⟨N₁, x_eqv_y⟩ := x_eqv_y (ε/2) (half_pos ε_pos)
-        have ⟨N₂, y_eqv_z⟩ := y_eqv_z (ε/2) (half_pos ε_pos)
-
-        let N := max N₁ N₂
-        exists N
-        intro n n_ge_N
-        simp_all
-        grind
-
-theorem eqv_iff {x y : 𝕊 α} : x ≈ y ↔ (x - y).converges_to 0 := by
-  unfold HasEquiv.Equiv instHasEquivOfSetoid instSetoid
-  simp
-
-theorem eqv_zero_iff_converges_zero {x : 𝕊 α} : x ⟶ 0 ↔ x ≈ 0 := by simp [eqv_iff]
-
-theorem converges_nz_gt_zero {x : 𝕊 α} (h_x : x ⟶ L) (L_nz : L ≠ 0) : ∃m > 0, ∃N, ∀i > N, |x i| > m := by
+theorem neqv_zero_gt_zero (h_x : x ⟶ L) (L_nz : L ≠ 0) : ∃m > 0, ∃N, ∀i > N, |x i| > m := by
   refine ⟨|L|/2, by grind, ?_⟩
   let ⟨N, h_x⟩ := h_x (|L|/2) (by grind)
   exists N
   grind
 
-theorem inv_converges {x : 𝕊 α} (h_x : x ⟶ A) (A_nz : A ≠ 0) : x⁻¹ ⟶ A⁻¹ := by
+theorem inv_converges (h_x : x ⟶ A) (A_nz : A ≠ 0) : x⁻¹ ⟶ A⁻¹ := by
   have : |A - 1| ≥ 0 := by grind
-  let ⟨m, m_pos, N₁, h_m⟩ := converges_nz_gt_zero h_x A_nz
+  let ⟨m, m_pos, N₁, h_m⟩ := neqv_zero_gt_zero h_x A_nz
 
   intro ε ε_pos
   let δ := ε/2 * m * |A|
@@ -277,6 +272,69 @@ theorem inv_converges {x : 𝕊 α} (h_x : x ⟶ A) (A_nz : A ≠ 0) : x⁻¹ �
     _ = |(x i)⁻¹ - A⁻¹| := by grind
     _ = |x⁻¹ i - A⁻¹| := by grind [inv_on]
 
+theorem converge_le_forall (h_x : x ⟶ A) (h_y : y ⟶ B) (x_le_y : ∀i, x i ≤ y i) : A ≤ B := by
+  by_contra!
+  let ε := (A - B)/3
+  have ε_pos : ε > 0 := by grind
+  let ⟨Nx, h_x⟩ := h_x ε ε_pos
+  let ⟨Ny, h_y⟩ := h_y ε ε_pos
+  let N := max Nx Ny
+  let i := N + 1
+  have h_x := h_x i (by grind)
+  have h_y := h_y i (by grind)
+  grind
+
+-- bounded
+
+theorem bounded_by_ge (h_x : x.bounded_by m) (h_M : M ≥ m) : x.bounded_by M := by
+  have ⟨m_pos, h_m⟩ := h_x
+  exact ⟨by grind, by grind⟩
+
+theorem converges_cauchy : x.converges → x.cauchy := by
+  intro ⟨L, x_conv⟩ ε ε_pos
+  let ⟨N, h_N⟩ := x_conv (ε/2) (by grind)
+  exists N
+  grind
+
+theorem cauchy_bounded (h_x : x.cauchy) : x.bounded := by
+  let ε : α := 1
+  let ⟨N, h_x⟩ := h_x ε (by grind)
+
+  let S : Finset α := Finset.image (fun i ↦ |x i|) (Finset.range (N + 1))
+  have S_Nonempty : S.Nonempty := by
+    apply Finset.image_nonempty.mpr
+    exact Finset.nonempty_range_add_one
+
+  let M₁ := Finset.max' S S_Nonempty
+  have h_M₁ (i : ℕ) (h_i : i ≤ N) : |x i| ≤ M₁ := by
+    apply Finset.le_max' S (|x i|)
+    grind
+
+  let M₂ := |x (N + 1)| + 1
+  have h_M₂ (i : ℕ) (h_i : i > N) : |x i| ≤ M₂ := by grind [h_x i h_i (N+1)]
+  let M := max M₁ M₂
+  exists M
+  exact And.intro (by grind) (by grind)
+
+theorem cauchy_neqv_zero_gt_zero (h_x : x.cauchy) : (¬x ⟶ 0) → ∃m > 0, ∃N, ∀i > N, |x i| > m := by
+  simp [converges_to]
+  intro ε ε_pos h_nz
+  refine ⟨ε/2, by grind, ?_⟩
+
+  let ⟨N, h_x⟩ := h_x (ε/2) (by grind)
+  exists N
+  intro i i_gt_N
+  have ⟨m, m_gt_N, h_m⟩ := h_nz N
+  have h_x := h_x m m_gt_N i i_gt_N
+  grind
+
 end limits
+
+
+instance [Coe α β] : Coe (𝕊 α) (𝕊 β) where
+  coe := map (↑·)
+
+@[simp]
+theorem coe_on [Coe α β] (x : 𝕊 α) {i : ℕ} : (↑x : 𝕊 β) i = ↑(x i) := rfl
 
 end Sequence

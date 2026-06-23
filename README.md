@@ -8,3 +8,6 @@ TODO:
 - remove abs_neg
 - simp vs grind performance
 - Reformulate it all with sequences again
+- bounded_montone_converges, peaks, subsequences
+- density of rationals
+- change LE to LT
