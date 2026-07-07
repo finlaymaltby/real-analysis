@@ -70,40 +70,8 @@ noncomputable instance : Field Completion where
   nnqsmul := _
   qsmul := _
 
-instance : LT Completion where
-  lt := Quotient.lift₂ LT.lt (by grind [Cauchy.lt_eqv])
-
-instance : LE Completion where
-  le := Quotient.lift₂ LE.le (by grind [Cauchy.le_eqv])
-
-instance : PartialOrder Completion where
-  le_refl := by simp [Quotient.forall]; exact Cauchy.le_refl
-  le_trans := by simp [Quotient.forall]; exact Cauchy.le_trans
-  lt_iff_le_not_ge := by simp [Quotient.forall]; exact Cauchy.lt_iff_le_not_ge
-  le_antisymm := by
-    simp [Quotient.forall]
-    exact fun x y h_le h_ge ↦ Quotient.eq.mpr (Cauchy.le_antisymm x y h_le h_ge)
-
-instance : DistribLattice Completion where
-  sup := Quotient.map₂ Cauchy.sup @Cauchy.sup_eqv
-  le_sup_left := by simp [Quotient.forall]; exact Cauchy.le_sup_left
-  le_sup_right := by simp [Quotient.forall]; exact Cauchy.le_sup_right
-  sup_le := by simp [Quotient.forall]; exact Cauchy.sup_le
-  inf := Quotient.map₂ Cauchy.inf sorry
-  inf_le_left := by simp [Quotient.forall]; exact Cauchy.inf_le_left
-  inf_le_right := by simp [Quotient.forall]; exact Cauchy.inf_le_right
-  le_inf := by simp [Quotient.forall]; exact Cauchy.le_inf
-  le_sup_inf := by
-    simp [Quotient.forall]
-    exact Cauchy.le_sup_inf
 
 
-instance leTotal_R : @Std.Total Completion (· ≤ ·) := ⟨by
-  simp [Quotient.forall]
-  exact Cauchy.le_total
-⟩
 
-open Classical in
-noncomputable instance : LinearOrder Completion := Lattice.toLinearOrder Completion
 
 end Completion

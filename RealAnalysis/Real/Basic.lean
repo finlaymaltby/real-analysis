@@ -94,43 +94,6 @@ noncomputable instance : Field ℝ where
 
 end arithmetic
 
-section order
-
-def lt := lift₂ LT.lt
-instance : LT ℝ := ⟨lt⟩
-def le := lift₂ LE.le
-instance : LE ℝ := ⟨le⟩
-def le_iff :  ∀ {x y : ℝ}, x ≤ y ↔ x.cauchy ≤ y.cauchy := by
-  intro x y
-  constructor <;> solve_by_elim
-
-instance : PartialOrder ℝ where
-  le_refl a := le_refl a.cauchy
-  le_trans a b c hab hbc := by
-    apply le_iff.mpr
-    exact le_trans (le_iff.mp hab) (le_iff.mp hbc)
-  lt_iff_le_not_ge a b := sorry
-  le_antisymm := sorry
-
-instance : DistribLattice ℝ := sorry
-
-instance : Archimedean ℝ where
-  arch x y y_pos := by
-    sorry
-
-instance : LinearOrder ℝ := by sorry
-
-
--- Topology
--- maybe no metric space, requires lean4 ℝ
--- instance : MetricSpace ℝ := sorry
-
--- instance : CompleteSpace ℝ := sorry
-
--- instance : NormedField ℝ := sorry
-
-end order
-
 end Real
 
 namespace Sequence
